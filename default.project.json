@@ -1,0 +1,16 @@
+{
+  "name": "JournaleSDK",
+  "tree": {
+    "$className": "ModuleScript",
+    "$path": "src/init.lua",
+    "HttpClient": {
+      "$path": "src/HttpClient.lua"
+    },
+    "History": {
+      "$path": "src/History.lua"
+    },
+    "PlayerData": {
+      "$path": "src/PlayerData.lua"
+    }
+  }
+}
