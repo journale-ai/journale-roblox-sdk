@@ -74,6 +74,7 @@ type Module = {
 	VERSION: string,
 	Init: (config: JournaleConfig) -> (),
 	ChatToAi: (player: Player, characterId: string, message: string, options: ChatOptions?) -> ChatResult,
+	ChatToCustomAi: (player: Player, characterId: string, message: string, options: ChatOptions?) -> ChatResult,
 	SetPlayerData: (player: Player, key: string, value: CustomValue) -> (),
 	GetPlayerData: (player: Player) -> PlayerDataRecord,
 	ClearHistory: (player: Player, characterId: string?) -> (),
@@ -201,9 +202,17 @@ function Journale.Init(config: JournaleConfig)
 	end
 end
 
-function Journale.ChatToAi(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
+local function sendChat(
+	player: Player,
+	characterId: string,
+	message: string,
+	options: ChatOptions?,
+	path: string,
+	sendCharacterID: boolean,
+	callerName: string
+): ChatResult
 	if not initialized or not activeConfig then
-		return fail("NOT_INITIALIZED", "[Journale] Init() must be called before ChatToAi().")
+		return fail("NOT_INITIALIZED", string.format("[Journale] Init() must be called before %s().", callerName))
 	end
 
 	if type(characterId) ~= "string" or characterId == "" then
@@ -233,16 +242,19 @@ function Journale.ChatToAi(player: Player, characterId: string, message: string,
 		+ string.len(if options and options.characterDescription then options.characterDescription else "")
 	local historyKey = conversationKey(player, characterId)
 	local context = History.BuildContext(historyKey, activeConfig.maxContextSize, reservedChars)
-	local payload = {
+	local payload: { [string]: any } = {
 		message = message,
 		context = context,
 		characterDescription = if options then options.characterDescription else nil,
-		characterID = characterId,
 		playerDescription = if playerDescription ~= "" then playerDescription else nil,
 		external_id = tostring(player.UserId),
 		identifier_type = "roblox",
 		player_data = PlayerData.ToPlayerDataPayload(playerData),
 	}
+
+	if sendCharacterID then
+		payload.characterID = characterId
+	end
 
 	if activeConfig.debug then
 		debugLog("Chat payload:", HttpService:JSONEncode(payload))
@@ -254,7 +266,7 @@ function Journale.ChatToAi(player: Player, characterId: string, message: string,
 		maxRetries = activeConfig.maxRetries,
 		baseBackoffSeconds = activeConfig.baseBackoffSeconds,
 		debug = activeConfig.debug,
-	}, payload)
+	}, payload, path)
 
 	if not httpResult.success then
 		return fail(httpResult.errorCode or "NETWORK_ERROR", httpResult.error or "[Journale] Chat request failed.")
@@ -284,6 +296,14 @@ function Journale.ChatToAi(player: Player, characterId: string, message: string,
 		reply = reply,
 		usage = usage,
 	}
+end
+
+function Journale.ChatToAi(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
+	return sendChat(player, characterId, message, options, "/chat", false, "ChatToAi")
+end
+
+function Journale.ChatToCustomAi(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
+	return sendChat(player, characterId, message, options, "/chat/character", true, "ChatToCustomAi")
 end
 
 function Journale.SetPlayerData(player: Player, key: string, value: CustomValue)

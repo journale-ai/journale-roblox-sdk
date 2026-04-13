@@ -23,7 +23,8 @@ export type HttpResponse = {
 
 local HttpClient = {}
 
-local API_URL = "https://api.journale.ai/chat"
+local API_BASE_URL = "https://api.journale.ai"
+local DEFAULT_PATH = "/chat"
 
 local function debugLog(enabled: boolean, ...)
 	if enabled then
@@ -85,14 +86,68 @@ local function resolveAuthorizationHeader(config: RequestConfig): (any, string?,
 	return nil, "[Journale] No API key configured. Set config.secretName or config.apiKey", "NETWORK_ERROR"
 end
 
+local function collectZodFieldErrors(node: any, path: string, collected: { string })
+	if type(node) ~= "table" then
+		return
+	end
+
+	local errors = node._errors
+	if type(errors) == "table" then
+		for _, message in ipairs(errors) do
+			if type(message) == "string" and message ~= "" then
+				if path == "" then
+					table.insert(collected, message)
+				else
+					table.insert(collected, string.format("%s: %s", path, message))
+				end
+			end
+		end
+	end
+
+	for key, value in pairs(node) do
+		if key ~= "_errors" and type(value) == "table" then
+			local childPath = if path == "" then tostring(key) else path .. "." .. tostring(key)
+			collectZodFieldErrors(value, childPath, collected)
+		end
+	end
+end
+
+local function stringifyDetails(details: any): string?
+	if type(details) == "string" then
+		return if details ~= "" then details else nil
+	end
+
+	if type(details) ~= "table" then
+		return nil
+	end
+
+	local collected: { string } = {}
+	collectZodFieldErrors(details, "", collected)
+	if #collected > 0 then
+		return table.concat(collected, "; ")
+	end
+
+	local ok, encoded = pcall(function()
+		return HttpService:JSONEncode(details)
+	end)
+	if ok and type(encoded) == "string" and encoded ~= "" and encoded ~= "{}" and encoded ~= "[]" then
+		return encoded
+	end
+
+	return nil
+end
+
 local function extractServerMessage(statusCode: number, body: { [string]: any }?, rawBody: string?): string?
 	if body then
-		local details = body.details
-		if type(details) == "string" and details ~= "" then
-			return details
-		end
-
+		local detailsMessage = stringifyDetails(body.details)
 		local errorMessage = body.error
+
+		if detailsMessage and type(errorMessage) == "string" and errorMessage ~= "" then
+			return string.format("%s (%s)", errorMessage, detailsMessage)
+		end
+		if detailsMessage then
+			return detailsMessage
+		end
 		if type(errorMessage) == "string" and errorMessage ~= "" then
 			return errorMessage
 		end
@@ -132,7 +187,9 @@ local function mapError(statusCode: number, body: { [string]: any }?, rawBody: s
 	return "NETWORK_ERROR", "[Journale] Could not reach Journale API. Check HttpService is enabled."
 end
 
-function HttpClient.Post(config: RequestConfig, payload: { [string]: any }): HttpResponse
+function HttpClient.Post(config: RequestConfig, payload: { [string]: any }, path: string?): HttpResponse
+	local requestPath = path or DEFAULT_PATH
+	local requestUrl = API_BASE_URL .. requestPath
 	if not isHttpEnabled() then
 		return {
 			success = false,
@@ -157,11 +214,11 @@ function HttpClient.Post(config: RequestConfig, payload: { [string]: any }): Htt
 
 	while true do
 		attempt += 1
-		debugLog(config.debug, string.format("POST %s (attempt %d)", API_URL, attempt))
+		debugLog(config.debug, string.format("POST %s (attempt %d)", requestUrl, attempt))
 
 		local ok, responseOrError = pcall(function()
 			return HttpService:RequestAsync({
-				Url = API_URL,
+				Url = requestUrl,
 				Method = "POST",
 				Headers = {
 					["Content-Type"] = "application/json",
@@ -197,6 +254,9 @@ function HttpClient.Post(config: RequestConfig, payload: { [string]: any }): Htt
 		local decodedBody = safeDecode(rawBody)
 
 		debugLog(config.debug, string.format("Received HTTP %d", statusCode))
+		if config.debug and (not response.Success or statusCode >= 300) then
+			debugLog(config.debug, "Error response body:", rawBody)
+		end
 
 		if response.Success and statusCode >= 200 and statusCode < 300 then
 			return {
