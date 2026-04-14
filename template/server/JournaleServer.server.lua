@@ -18,6 +18,11 @@ if not chatEvent then
 end
 
 local lastRequestAtByPlayerId: { [number]: number } = {}
+
+-- Character IDs are LOCAL identifiers you choose in your own code. They live
+-- only on this server and are used by the SDK to key conversation history per
+-- player + character. They are never sent to the Journale API — each character's
+-- personality comes entirely from the `characterDescription` passed to ChatToAi.
 local characterDescriptions = {
 	shopkeeper_01 = "A friendly village shopkeeper who knows every rumor in town.",
 	guard_01 = "A stern castle guard who only respects brave adventurers.",

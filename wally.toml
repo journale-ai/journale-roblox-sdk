@@ -1,9 +1,0 @@
-[package]
-name = "journale/journale-sdk"
-version = "1.0.0"
-registry = "https://github.com/UpliftGames/wally-index"
-realm = "server"
-license = "MIT"
-description = "Journale AI SDK for Roblox - AI-powered dialogue for your game"
-
-[dependencies]

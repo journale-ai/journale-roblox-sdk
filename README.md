@@ -4,6 +4,8 @@
 
 Server-side Luau SDK for adding Journale AI dialogue to Roblox experiences.
 
+**GitHub**: <https://github.com/journale-ai/journale-roblox-sdk>
+
 ## Prerequisites
 
 - A Journale AI account with a project and API key: <https://journale.ai/dashboard>
@@ -12,37 +14,14 @@ Server-side Luau SDK for adding Journale AI dialogue to Roblox experiences.
 
 ## Installation
 
-### Option A: GitHub `.rbxm`
-
-1. Download `JournaleSDK.rbxm` from the latest GitHub release.
-2. In Roblox Studio, go to `File > Insert from File`.
+1. Download `JournaleSDK.rbxm` from the [latest GitHub release](https://github.com/journale-ai/journale-roblox-sdk/releases).
+2. In Roblox Studio, go to `File > Insert from File` and select the `.rbxm`.
 3. Move the imported `JournaleSDK` module into `ServerScriptService`.
 
-Build the release artifact locally with Rojo:
+Maintainers can rebuild the release artifact locally with Rojo:
 
 ```bash
 rojo build default.project.json -o JournaleSDK.rbxm
-```
-
-### Option B: Creator Store (in progress)
-
-1. Open the Toolbox in Roblox Studio.
-2. Search for `Journale AI SDK`.
-3. Insert the model and move `JournaleSDK` into `ServerScriptService`.
-
-### Option C: Wally
-
-Add the package to your `wally.toml`:
-
-```toml
-[server-dependencies]
-JournaleSDK = "journale/journale-sdk@^1.0"
-```
-
-Then run:
-
-```bash
-wally install
 ```
 
 ## Setup
@@ -74,6 +53,10 @@ chatEvent.OnServerEvent:Connect(function(player, characterId, message)
         return
     end
 
+    -- `characterId` is a local string you choose (e.g., "shopkeeper_01").
+    -- It scopes conversation history per player + character on this server.
+    -- It is not sent to the Journale API — the character's personality comes
+    -- from `characterDescription` below.
     local result = Journale.ChatToAi(player, characterId, message, {
         characterDescription = "A friendly village shopkeeper",
     })
@@ -127,6 +110,10 @@ Journale.SetPlayerData(player, "level", 42)
 Journale.SetPlayerData(player, "currentQuest", "Retrieve the Lost Sword")
 ```
 
+## Character IDs
+
+`characterId` is a **local** developer-chosen string. Use it to tell the SDK which on-server conversation a message belongs to — e.g., `"shopkeeper_01"`, `"guard_captain"`, `"old_merchant"`. You don't need to register these anywhere; pick whatever strings make sense for your game. The SDK keys conversation history by `{playerId}_{characterId}` so each player has an independent memory per character. Personality is defined entirely by the `characterDescription` option you pass to `ChatToAi`.
+
 ## Public API
 
 ```lua
@@ -148,5 +135,5 @@ They demonstrate RemoteEvent validation, per-player cooldowns, NPC proximity che
 
 ## Full Documentation
 
-- Repository quickstart: [`specs/003-roblox-sdk/quickstart.md`](../../specs/003-roblox-sdk/quickstart.md)
+- GitHub repository: <https://github.com/journale-ai/journale-roblox-sdk>
 - Website SDK docs: <https://journale.ai/docs/sdks>
