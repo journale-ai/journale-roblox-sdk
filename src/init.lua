@@ -74,7 +74,7 @@ type Module = {
 	VERSION: string,
 	Init: (config: JournaleConfig) -> (),
 	ChatToAi: (player: Player, characterId: string, message: string, options: ChatOptions?) -> ChatResult,
-	ChatToCustomAi: (player: Player, characterId: string, message: string, options: ChatOptions?) -> ChatResult,
+	ChatWithCharacter: (player: Player, characterId: string, message: string, options: ChatOptions?) -> ChatResult,
 	SetPlayerData: (player: Player, key: string, value: CustomValue) -> (),
 	GetPlayerData: (player: Player) -> PlayerDataRecord,
 	ClearHistory: (player: Player, characterId: string?) -> (),
@@ -82,7 +82,7 @@ type Module = {
 
 local Journale: Module = {} :: Module
 
-local VERSION = "1.0.0"
+local VERSION = "1.1.0"
 local initialized = false
 local activeConfig: ResolvedConfig? = nil
 
@@ -209,6 +209,7 @@ local function sendChat(
 	options: ChatOptions?,
 	path: string,
 	sendCharacterID: boolean,
+	sendStoredCharacterId: boolean,
 	callerName: string
 ): ChatResult
 	if not initialized or not activeConfig then
@@ -245,14 +246,16 @@ local function sendChat(
 	local payload: { [string]: any } = {
 		message = message,
 		context = context,
-		characterDescription = if options then options.characterDescription else nil,
+		characterDescription = if sendStoredCharacterId then nil else if options then options.characterDescription else nil,
 		playerDescription = if playerDescription ~= "" then playerDescription else nil,
 		external_id = tostring(player.UserId),
 		identifier_type = "roblox",
 		player_data = PlayerData.ToPlayerDataPayload(playerData),
 	}
 
-	if sendCharacterID then
+	if sendStoredCharacterId then
+		payload.characterId = characterId
+	elseif sendCharacterID then
 		payload.characterID = characterId
 	end
 
@@ -299,11 +302,11 @@ local function sendChat(
 end
 
 function Journale.ChatToAi(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
-	return sendChat(player, characterId, message, options, "/chat", false, "ChatToAi")
+	return sendChat(player, characterId, message, options, "/v1/chat", false, false, "ChatToAi")
 end
 
-function Journale.ChatToCustomAi(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
-	return sendChat(player, characterId, message, options, "/chat/character", true, "ChatToCustomAi")
+function Journale.ChatWithCharacter(player: Player, characterId: string, message: string, options: ChatOptions?): ChatResult
+	return sendChat(player, characterId, message, options, "/v1/chat/character", false, true, "ChatWithCharacter")
 end
 
 function Journale.SetPlayerData(player: Player, key: string, value: CustomValue)

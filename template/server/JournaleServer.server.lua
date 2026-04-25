@@ -19,10 +19,8 @@ end
 
 local lastRequestAtByPlayerId: { [number]: number } = {}
 
--- Character IDs are LOCAL identifiers you choose in your own code. They live
--- only on this server and are used by the SDK to key conversation history per
--- player + character. They are never sent to the Journale API — each character's
--- personality comes entirely from the `characterDescription` passed to ChatToAi.
+-- Character IDs below are LOCAL identifiers for ChatToAi. For dashboard-managed
+-- characters, call Journale.ChatWithCharacter(player, "stored_character_slug", message).
 local characterDescriptions = {
 	shopkeeper_01 = "A friendly village shopkeeper who knows every rumor in town.",
 	guard_01 = "A stern castle guard who only respects brave adventurers.",
@@ -86,6 +84,11 @@ chatEvent.OnServerEvent:Connect(function(player, characterId, message)
 			serverName = game.Name,
 		},
 	})
+
+	-- Stored character example:
+	-- local result = Journale.ChatWithCharacter(player, "silas_merchant", message, {
+	-- 	customPlayerData = { serverName = game.Name },
+	-- })
 
 	-- The player could have left while the HTTP request was in flight.
 	if Players:GetPlayerByUserId(player.UserId) == nil then

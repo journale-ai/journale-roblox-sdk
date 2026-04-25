@@ -1,6 +1,6 @@
 # Journale AI Roblox SDK
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
 Server-side Luau SDK for adding Journale AI dialogue to Roblox experiences.
 
@@ -61,6 +61,9 @@ chatEvent.OnServerEvent:Connect(function(player, characterId, message)
         characterDescription = "A friendly village shopkeeper",
     })
 
+    -- If you created a stored character in the Journale dashboard, call it by slug:
+    -- local result = Journale.ChatWithCharacter(player, "silas_merchant", message)
+
     if result.success then
         chatEvent:FireClient(player, {
             success = true,
@@ -112,17 +115,27 @@ Journale.SetPlayerData(player, "currentQuest", "Retrieve the Lost Sword")
 
 ## Character IDs
 
-`characterId` is a **local** developer-chosen string. Use it to tell the SDK which on-server conversation a message belongs to — e.g., `"shopkeeper_01"`, `"guard_captain"`, `"old_merchant"`. You don't need to register these anywhere; pick whatever strings make sense for your game. The SDK keys conversation history by `{playerId}_{characterId}` so each player has an independent memory per character. Personality is defined entirely by the `characterDescription` option you pass to `ChatToAi`.
+`ChatToAi` uses `characterId` as a **local** developer-chosen string. Use it to tell the SDK which on-server conversation a message belongs to — e.g., `"shopkeeper_01"`, `"guard_captain"`, `"old_merchant"`. The SDK keys conversation history by `{playerId}_{characterId}` so each player has an independent memory per character. Personality is defined by the `characterDescription` option you pass to `ChatToAi`.
+
+`ChatWithCharacter` uses the stored `characterId` slug from the Journale dashboard and sends it to `POST /v1/chat/character`. Use this when you want dashboard-managed personality, physical description, avatars, and per-character analytics.
 
 ## Public API
 
 ```lua
 Journale.Init(config)
 Journale.ChatToAi(player, characterId, message, options?)
+Journale.ChatWithCharacter(player, characterId, message, options?)
 Journale.SetPlayerData(player, key, value)
 Journale.GetPlayerData(player)
 Journale.ClearHistory(player, characterId?)
 ```
+
+## Changelog
+
+### 1.1.0
+
+- Rebased HTTP calls to the `/v1` API surface.
+- Added `Journale.ChatWithCharacter(...)` for dashboard-managed characters.
 
 ## Template
 

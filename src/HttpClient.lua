@@ -24,7 +24,7 @@ export type HttpResponse = {
 local HttpClient = {}
 
 local API_BASE_URL = "https://api.journale.ai"
-local DEFAULT_PATH = "/chat"
+local DEFAULT_PATH = "/v1/chat"
 
 local function debugLog(enabled: boolean, ...)
 	if enabled then
